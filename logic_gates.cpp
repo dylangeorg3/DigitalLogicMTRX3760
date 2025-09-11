@@ -19,7 +19,7 @@ void cWire::AddOutputConnection( cLogicGate* apGateToDrive, int aGateInputToDriv
   ++mNumOutputConnections; // Increment number of output connections
 }
 //---
-void cWire::DriveLevel( eLogicLevel aNewLevel ) {
+void cWire::DriveLevel( cLogic::eLogicLevel aNewLevel ) {
 
   for( int i=0; i<mNumOutputConnections; ++i ) // For each connected output
     mpGatesToDrive[i]->DriveInput( mGateInputIndices[i], aNewLevel ); // Set the input of the gate to the new level
@@ -28,14 +28,11 @@ void cWire::DriveLevel( eLogicLevel aNewLevel ) {
 
 //---cLogicGate Implementation------------------------------------------------
 cLogicGate::cLogicGate(int aNumInputs, int aNumOutputs)
-  : mInputs(aNumInputs, LOGIC_UNDEFINED),
-    mOutputValues(aNumOutputs, LOGIC_UNDEFINED),
+  : mInputs(aNumInputs, cLogic::LOGIC_UNDEFINED),
+    mOutputValues(aNumOutputs, cLogic::LOGIC_UNDEFINED),
     mpOutputConnections(aNumOutputs, nullptr) {}
 //---
-cLogicGate::~cLogicGate() {}
-//---
-eLogicLevel cLogicGate::GetOutputState(int aOutputIndex) {
-  ComputeOutput();
+cLogic::eLogicLevel cLogicGate::GetOutputState(int aOutputIndex) {
   return mOutputValues[aOutputIndex]; // Return the current output value
 }
 //---
@@ -44,7 +41,7 @@ void cLogicGate::ConnectOutput(int aOutputIndex, cWire* apOutputConnection ) {
   mpOutputConnections[aOutputIndex] = apOutputConnection; // Set the output wire connection
 }
 //---
-void cLogicGate::DriveInput( int aInputIndex, eLogicLevel aNewLevel ) {
+void cLogicGate::DriveInput( int aInputIndex, cLogic::eLogicLevel aNewLevel ) {
 
   mInputs[aInputIndex] = aNewLevel; // Set the specified input to the new logic level
   ComputeOutput(); // Recompute the output value
@@ -57,19 +54,19 @@ cAndGate::~cAndGate() {}
 //---
 void cAndGate::ComputeOutput() {
 
-  eLogicLevel NewVal = LOGIC_LOW; // Default to LOW (AND gate)
+  cLogic::eLogicLevel NewVal = cLogic::LOGIC_LOW; // Default to LOW (AND gate)
 
-  if( mInputs[0] == LOGIC_UNDEFINED || mInputs[1] == LOGIC_UNDEFINED ) {
-    NewVal = LOGIC_UNDEFINED; // If any input is undefined, output is undefined
+  if( mInputs[INPUT_A] == cLogic::LOGIC_UNDEFINED || mInputs[INPUT_B] == cLogic::LOGIC_UNDEFINED ) {
+    NewVal = cLogic::LOGIC_UNDEFINED; // If any input is undefined, output is undefined
   }
-  else if( mInputs[0] == LOGIC_HIGH && mInputs[1] == LOGIC_HIGH ) {
-    NewVal = LOGIC_HIGH; // Both inputs HIGH, output HIGH
+  else if( mInputs[INPUT_A] == cLogic::LOGIC_HIGH && mInputs[INPUT_B] == cLogic::LOGIC_HIGH ) {
+    NewVal = cLogic::LOGIC_HIGH; // Both inputs HIGH, output HIGH
   }
 
-  mOutputValues[0] = NewVal;
+  mOutputValues[OUTPUT] = NewVal;
   
-  if( mpOutputConnections[0] != NULL ) {
-    mpOutputConnections[0]->DriveLevel( mOutputValues[0] ); // Drive output wire
+  if( mpOutputConnections[OUTPUT] != NULL ) {
+    mpOutputConnections[OUTPUT]->DriveLevel( mOutputValues[OUTPUT] ); // Drive output wire
   }
 }
 //---
@@ -80,8 +77,8 @@ void cAndGate::TestOutputs() {
     for (int i = 0; i < 4; i++) {
         int A = (i >> 1) & 1;
         int B = i & 1;
-        DriveInput(0, A ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(1, B ? LOGIC_HIGH : LOGIC_LOW);
+        DriveInput(INPUT_A, A ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_B, B ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
         ComputeOutput();
         int Out = GetOutputState(0);
         std::cout << A << " " << B << " |  " << Out << std::endl;
@@ -95,19 +92,19 @@ cNandGate::~cNandGate() {}
 //---
 void cNandGate::ComputeOutput() {
 
-  eLogicLevel NewVal = LOGIC_HIGH; // Default to HIGH (NAND gate)
+  cLogic::eLogicLevel NewVal = cLogic::LOGIC_HIGH; // Default to HIGH (NAND gate)
 
-  if( mInputs[0] == LOGIC_UNDEFINED || mInputs[1] == LOGIC_UNDEFINED ) {
-    NewVal = LOGIC_UNDEFINED; // If any input is undefined, output is undefined
+  if( mInputs[INPUT_A] == cLogic::LOGIC_UNDEFINED || mInputs[INPUT_B] == cLogic::LOGIC_UNDEFINED ) {
+    NewVal = cLogic::LOGIC_UNDEFINED; // If any input is undefined, output is undefined
   }
-  else if( mInputs[0] == LOGIC_HIGH && mInputs[1] == LOGIC_HIGH ) {
-    NewVal = LOGIC_LOW; // Both inputs HIGH, output LOW
+  else if( mInputs[INPUT_A] == cLogic::LOGIC_HIGH && mInputs[INPUT_B] == cLogic::LOGIC_HIGH ) {
+    NewVal = cLogic::LOGIC_LOW; // Both inputs HIGH, output LOW
   }
 
-  mOutputValues[0] = NewVal;
+  mOutputValues[OUTPUT] = NewVal;
   
-  if( mpOutputConnections[0] != NULL ) {
-    mpOutputConnections[0]->DriveLevel( mOutputValues[0] ); // Drive output wire
+  if( mpOutputConnections[OUTPUT] != NULL ) {
+    mpOutputConnections[OUTPUT]->DriveLevel( mOutputValues[OUTPUT] ); // Drive output wire
   }
 }
 //---
@@ -118,8 +115,8 @@ void cNandGate::TestOutputs() {
     for (int i = 0; i < 4; i++) {
         int A = (i >> 1) & 1;
         int B = i & 1;
-        DriveInput(0, A ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(1, B ? LOGIC_HIGH : LOGIC_LOW);
+        DriveInput(INPUT_A, A ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_B, B ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
         ComputeOutput();
         int Out = GetOutputState(0);
         std::cout << A << " " << B << " |  " << Out << std::endl;
@@ -133,22 +130,22 @@ cOrGate::~cOrGate() {}
 //---
 void cOrGate::ComputeOutput() {
 
-  eLogicLevel NewVal = LOGIC_LOW; // Default to LOW (OR gate)
+  cLogic::eLogicLevel NewVal = cLogic::LOGIC_LOW; // Default to LOW (OR gate)
 
-  if( mInputs[0] == LOGIC_UNDEFINED || mInputs[1] == LOGIC_UNDEFINED ) {
-    NewVal = LOGIC_UNDEFINED; // If any input is undefined, output is undefined
+  if( mInputs[INPUT_A] == cLogic::LOGIC_UNDEFINED || mInputs[INPUT_B] == cLogic::LOGIC_UNDEFINED ) {
+    NewVal = cLogic::LOGIC_UNDEFINED; // If any input is undefined, output is undefined
   }
-  else if( mInputs[0] == LOGIC_LOW && mInputs[1] == LOGIC_LOW ) {
-    NewVal = LOGIC_LOW; // Both inputs LOW, output LOW
+  else if( mInputs[INPUT_A] == cLogic::LOGIC_LOW && mInputs[INPUT_B] == cLogic::LOGIC_LOW ) {
+    NewVal = cLogic::LOGIC_LOW; // Both inputs LOW, output LOW
   }
   else {
-    NewVal = LOGIC_HIGH; // Any input HIGH, output HIGH
+    NewVal = cLogic::LOGIC_HIGH; // Any input HIGH, output HIGH
   }
 
-  mOutputValues[0] = NewVal;
+  mOutputValues[OUTPUT] = NewVal;
   
-  if( mpOutputConnections[0] != NULL ) {
-    mpOutputConnections[0]->DriveLevel( mOutputValues[0] ); // Drive output wire
+  if( mpOutputConnections[OUTPUT] != NULL ) {
+    mpOutputConnections[OUTPUT]->DriveLevel( mOutputValues[OUTPUT] ); // Drive output wire
   }
 }
 //---
@@ -159,8 +156,8 @@ void cOrGate::TestOutputs() {
     for (int i = 0; i < 4; i++) {
         int A = (i >> 1) & 1;
         int B = i & 1;
-        DriveInput(0, A ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(1, B ? LOGIC_HIGH : LOGIC_LOW);
+        DriveInput(INPUT_A, A ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_B, B ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
         ComputeOutput();
         int Out = GetOutputState(0);
         std::cout << A << " " << B << " |  " << Out << std::endl;
@@ -174,20 +171,20 @@ cXorGate::~cXorGate() {}
 //---
 void cXorGate::ComputeOutput() {
 
-  eLogicLevel NewVal = LOGIC_LOW; // Default to LOW (XOR gate)
+  cLogic::eLogicLevel NewVal = cLogic::LOGIC_LOW; // Default to LOW (XOR gate)
 
-  if( mInputs[0] == LOGIC_UNDEFINED || mInputs[1] == LOGIC_UNDEFINED ) {
-    NewVal = LOGIC_UNDEFINED; // If any input is undefined, output is undefined
+  if( mInputs[INPUT_A] == cLogic::LOGIC_UNDEFINED || mInputs[INPUT_B] == cLogic::LOGIC_UNDEFINED ) {
+    NewVal = cLogic::LOGIC_UNDEFINED; // If any input is undefined, output is undefined
   }
-  else if((mInputs[0] == LOGIC_HIGH && mInputs[1] == LOGIC_LOW) || 
-          (mInputs[0] == LOGIC_LOW && mInputs[1] == LOGIC_HIGH)) {
-    NewVal = LOGIC_HIGH; // Inputs differ, output HIGH
+  else if((mInputs[INPUT_A] == cLogic::LOGIC_HIGH && mInputs[INPUT_B] == cLogic::LOGIC_LOW) || 
+          (mInputs[INPUT_A] == cLogic::LOGIC_LOW && mInputs[INPUT_B] == cLogic::LOGIC_HIGH)) {
+    NewVal = cLogic::LOGIC_HIGH; // Inputs differ, output HIGH
   }
 
-  mOutputValues[0] = NewVal;
+  mOutputValues[OUTPUT] = NewVal;
   
-  if( mpOutputConnections[0] != NULL ) {
-    mpOutputConnections[0]->DriveLevel( mOutputValues[0] ); // Drive output wire
+  if( mpOutputConnections[OUTPUT] != NULL ) {
+    mpOutputConnections[OUTPUT]->DriveLevel( mOutputValues[OUTPUT] ); // Drive output wire
   }
 }
 //---
@@ -198,8 +195,8 @@ void cXorGate::TestOutputs() {
     for (int i = 0; i < 4; i++) {
         int A = (i >> 1) & 1;
         int B = i & 1;
-        DriveInput(0, A ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(1, B ? LOGIC_HIGH : LOGIC_LOW);
+        DriveInput(INPUT_A, A ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_B, B ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
         ComputeOutput();
         int Out = GetOutputState(0);
         std::cout << A << " " << B << " |  " << Out << std::endl;

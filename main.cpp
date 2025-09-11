@@ -3,16 +3,14 @@
 // Date Modified: 1st September 2025
 // Description: Main entry point for the logic circuit simulator program.
 
-
-
-#include "logic_gates.hpp"
-#include "circuits.hpp"
+#include "logic_gates.hpp" // Include logic gate definitions
+#include "circuits.hpp"    // Include circuit definitions
 
 int main() {
 
     cSimulation* sim = new cSimulation();
-    sim -> RunSimulation();
+    sim->RunSimulation();
     delete sim;
-
+    
     return 0;
 }

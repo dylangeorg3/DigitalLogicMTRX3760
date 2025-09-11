@@ -5,41 +5,45 @@
 
 #include "circuits.hpp"
 
-//---cSubCircuit Implementation------------------------------------------------
+// cSubCircuit constructor initializes the subcircuit with the given number of inputs and outputs.
 cSubCircuit::cSubCircuit(int aNumInputs, int aNumOutputs) 
     : cLogicGate( aNumInputs, aNumOutputs) {
 
         ComputeOutput(); // Compute initial output values
 }
-
-
-//---cHalfAdder Implementation------------------------------------------------
+//---
+// cHalfAdder constructor sets up a half adder with 2 inputs and 2 outputs.
 cHalfAdder::cHalfAdder() : cSubCircuit(/*inputs*/2, /*outputs*/2) {
     ComputeOutput(); // Compute initial output values
 }
+// Calls ComputeOutput to set initial output values.
 //---
 void cHalfAdder::ComputeOutput() {
-    mAND.DriveInput(0, mInputs[HA_A]); // Set first input of AND gate
-    mAND.DriveInput(1, mInputs[HA_B]); // Set second input of AND gate
+    // Compute the outputs for the half adder:
+    // - AND gate computes carry output
+    // - XOR gate computes sum output
+    mAND.DriveInput(INPUT_A, mInputs[INPUT_A]); // Set first input of AND gate
+    mAND.DriveInput(INPUT_B, mInputs[INPUT_B]); // Set second input of AND gate
     mAND.ComputeOutput(); // Calculate AND gate output
 
-    mXOR.DriveInput(0, mInputs[HA_A]); // Set first input of XOR gate
-    mXOR.DriveInput(1, mInputs[HA_B]); // Set second input of XOR gate
+    mXOR.DriveInput(INPUT_A, mInputs[INPUT_A]); // Set first input of XOR gate
+    mXOR.DriveInput(INPUT_B, mInputs[INPUT_B]); // Set second input of XOR gate
     mXOR.ComputeOutput(); // Calculate XOR gate output
 
-    mOutputValues[HA_SUM] = mXOR.GetOutputState(0); // Store XOR output as SUM
-    mOutputValues[HA_CARRY] = mAND.GetOutputState(0); // Store AND output as CARRY
+    mOutputValues[SUM_OUTPUT] = mXOR.GetOutputState(OUTPUT); // Store XOR output as SUM
+    mOutputValues[CARRY_OUTPUT] = mAND.GetOutputState(OUTPUT); // Store AND output as CARRY
 }
 //---
 void cHalfAdder::TestOutputs() {
+    // Print the truth table for the half adder
     std::cout << "\nTest Output for Half Adder" << std::endl;
     std::cout << "A B | Sum Cout" << std::endl;
     std::cout << "----------------" << std::endl;
     for (int i = 0; i < 4; i++) {
         int A = (i >> 1) & 1;
         int B = i & 1;
-        DriveInput(0, A ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(1, B ? LOGIC_HIGH : LOGIC_LOW);
+        DriveInput(INPUT_A, A ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_B, B ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
         ComputeOutput();
         int Sum = GetOutputState(SUM_OUTPUT);
         int Cout = GetOutputState(CARRY_OUTPUT);
@@ -52,34 +56,33 @@ void cHalfAdder::TestOutputs() {
 cFullAdder::cFullAdder() : cSubCircuit(/*inputs*/3, /*outputs*/2) {
     ComputeOutput();
 }
+// cFullAdder constructor sets up a full adder with 3 inputs and 2 outputs.
+// Calls ComputeOutput to set initial output values.
 //---
 void cFullAdder::ComputeOutput() {
-    mAND1.DriveInput(0, mInputs[FA_A]); // Set first input of AND gate
-    mAND1.DriveInput(1, mInputs[FA_B]); // Set second input of AND gate
-    mAND1.ComputeOutput(); // Calculate AND gate output
+    // Compute the outputs for the full adder:
+    // - First half adder adds A and B
+    // - Second half adder adds sum from first half adder and carry-in
+    // - OR gate combines carry outputs
+    mHalfAdder1.DriveInput(INPUT_A, mInputs[INPUT_A]); 
+    mHalfAdder1.DriveInput(INPUT_B, mInputs[INPUT_B]);
+    mHalfAdder1.ComputeOutput(); 
 
-    mXOR1.DriveInput(0, mInputs[FA_A]); // Set first input of XOR gate
-    mXOR1.DriveInput(1, mInputs[FA_B]); // Set second input of XOR gate
-    mXOR1.ComputeOutput(); // Calculate XOR gate output
+    mHalfAdder2.DriveInput(INPUT_A, mHalfAdder1.GetOutputState(SUM_OUTPUT));
+    mHalfAdder2.DriveInput(INPUT_B, mInputs[INPUT_CARRY]);
+    mHalfAdder2.ComputeOutput();
 
-    mXOR2.DriveInput(0, mXOR1.GetOutputState(0));
-    mXOR2.DriveInput(1, mInputs[FA_CIN]);
-    mXOR2.ComputeOutput();
+    mOutputValues[SUM_OUTPUT] = mHalfAdder2.GetOutputState(SUM_OUTPUT); 
 
-    mOutputValues[FA_SUM] = mXOR2.GetOutputState(0); // Store XOR2 output as SUM
-
-    mAND2.DriveInput(0, mXOR1.GetOutputState(0));
-    mAND2.DriveInput(1, mInputs[FA_CIN] );
-    mAND2.ComputeOutput();
-
-    mOR.DriveInput(0, mAND1.GetOutputState(0));
-    mOR.DriveInput(1, mAND2.GetOutputState(0));
+    mOR.DriveInput(INPUT_A, mHalfAdder2.GetOutputState(CARRY_OUTPUT));
+    mOR.DriveInput(INPUT_B, mHalfAdder1.GetOutputState(CARRY_OUTPUT) );
     mOR.ComputeOutput();
 
-    mOutputValues[FA_CARRY] = mOR.GetOutputState(0); // Store OR output as CARRY
+    mOutputValues[CARRY_OUTPUT] = mOR.GetOutputState(OUTPUT);
 }
 //---
 void cFullAdder::TestOutputs() {
+    // Print the truth table for the full adder
     std::cout << "\nTest Output for Full Adder " << std::endl;
     std::cout << "A B Cin | Sum Cout" << std::endl;
     std::cout << "------------------" << std::endl;
@@ -92,9 +95,9 @@ void cFullAdder::TestOutputs() {
         int Cin =  i       & 1;  // LSB
 
         // Drive inputs
-        DriveInput(0, A ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(1, B ? LOGIC_HIGH : LOGIC_LOW);
-        DriveInput(2, Cin ? LOGIC_HIGH : LOGIC_LOW);
+        DriveInput(INPUT_A, A ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_B, B ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+        DriveInput(INPUT_CARRY, Cin ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
 
         // Compute output if needed
         ComputeOutput();
@@ -110,40 +113,43 @@ void cFullAdder::TestOutputs() {
 }
 
 
-
 //---cThreeBitAdder Implementation------------------------------------------------
 // Constructor for ThreeBitAdder, sets up a 6-input, 4-output subcircuit
 cThreeBitAdder::cThreeBitAdder() : cSubCircuit(/*inputs*/6, /*outputs*/4) {
     ComputeOutput();
-};
+}
+// cThreeBitAdder constructor sets up a 3-bit adder with 6 inputs and 4 outputs.
+// Calls ComputeOutput to set initial output values.
 //---
 void cThreeBitAdder::ComputeOutput() {
-    // Stage 0: LSB uses Half Adder on A0, B0
-    mHalfAdder.DriveInput(0, mInputs[A0]);
-    mHalfAdder.DriveInput(1, mInputs[B0]);
-    eLogicLevel s0   = mHalfAdder.GetOutputState(SUM_OUTPUT);    // from half adder
-    eLogicLevel c01  = mHalfAdder.GetOutputState(CARRY_OUTPUT);  // carry to next stage
+    // Compute the outputs for the 3-bit adder:
+    // - Stage 0: LSB uses Half Adder on A0, B0
+    mHalfAdder.DriveInput(INPUT_A, mInputs[A0]);
+    mHalfAdder.DriveInput(INPUT_B, mInputs[B0]);
+    cLogic::eLogicLevel s0   = mHalfAdder.GetOutputState(SUM_OUTPUT);    // from half adder
+    cLogic::eLogicLevel c01  = mHalfAdder.GetOutputState(CARRY_OUTPUT);  // carry to next stage
     mOutputValues[S0] = s0;
 
-    // Stage 1: Full Adder on A1, B1 with Cin = c01
-    mFullAdder1.DriveInput(0, mInputs[A1]);           // A1
-    mFullAdder1.DriveInput(1, mInputs[B1]);           // B1
-    mFullAdder1.DriveInput(2, c01);                   // Cin from previous stage
-    eLogicLevel s1   = mFullAdder1.GetOutputState(SUM_OUTPUT);
-    eLogicLevel c12  = mFullAdder1.GetOutputState(CARRY_OUTPUT);  // carry to next stage
+    // - Stage 1: Full Adder on A1, B1 with Cin = c01
+    mFullAdder1.DriveInput(INPUT_A, mInputs[A1]);           // A1
+    mFullAdder1.DriveInput(INPUT_B, mInputs[B1]);           // B1
+    mFullAdder1.DriveInput(INPUT_CARRY, c01);                   // Cin from previous stage
+    cLogic::eLogicLevel s1   = mFullAdder1.GetOutputState(SUM_OUTPUT);
+    cLogic::eLogicLevel c12  = mFullAdder1.GetOutputState(CARRY_OUTPUT);  // carry to next stage
     mOutputValues[S1] = s1;
 
-    // Stage 2 (MSB): Full Adder on A2, B2 with Cin = c12
-    mFullAdder2.DriveInput(0, mInputs[A2]);           // A2
-    mFullAdder2.DriveInput(1, mInputs[B2]);           // B2
-    mFullAdder2.DriveInput(2, c12);                   // Cin from previous stage
-    eLogicLevel s2   = mFullAdder2.GetOutputState(SUM_OUTPUT);
-    eLogicLevel cout = mFullAdder2.GetOutputState(CARRY_OUTPUT);
+    // - Stage 2 (MSB): Full Adder on A2, B2 with Cin = c12
+    mFullAdder2.DriveInput(INPUT_A, mInputs[A2]);           // A2
+    mFullAdder2.DriveInput(INPUT_B, mInputs[B2]);           // B2
+    mFullAdder2.DriveInput(INPUT_CARRY, c12);                   // Cin from previous stage
+    cLogic::eLogicLevel s2   = mFullAdder2.GetOutputState(SUM_OUTPUT);
+    cLogic::eLogicLevel cout = mFullAdder2.GetOutputState(CARRY_OUTPUT);
     mOutputValues[S2]  = s2;
     mOutputValues[COUT]= cout;
 }
 //---
 void cThreeBitAdder::TestOutputs() {
+    // Print the truth table for the 3-bit adder
     std::cout << "\nTest Output for 3-bit Adder\n";
     std::cout << "A2 A1 A0 | B2 B1 B0 || COUT S2 S1 S0\n";
     std::cout << "-------------------------------------\n";
@@ -152,13 +158,13 @@ void cThreeBitAdder::TestOutputs() {
     for (int A = 0; A < 8; ++A) {
         for (int B = 0; B < 8; ++B) {
             // Drive inputs (A2..A0, B2..B0)
-            DriveInput(A2, (A & 0b100) ? LOGIC_HIGH : LOGIC_LOW);
-            DriveInput(A1, (A & 0b010) ? LOGIC_HIGH : LOGIC_LOW);
-            DriveInput(A0, (A & 0b001) ? LOGIC_HIGH : LOGIC_LOW);
+            DriveInput(A2, (A & 0b100) ? cLogic::LOGIC_HIGH : cLogic::LOGIC_LOW);
+            DriveInput(A1, (A & 0b010) ?  cLogic::LOGIC_HIGH :  cLogic::LOGIC_LOW);
+            DriveInput(A0, (A & 0b001) ?  cLogic::LOGIC_HIGH :  cLogic::LOGIC_LOW);
 
-            DriveInput(B2, (B & 0b100) ? LOGIC_HIGH : LOGIC_LOW);
-            DriveInput(B1, (B & 0b010) ? LOGIC_HIGH : LOGIC_LOW);
-            DriveInput(B0, (B & 0b001) ? LOGIC_HIGH : LOGIC_LOW);
+            DriveInput(B2, (B & 0b100) ?  cLogic::LOGIC_HIGH :  cLogic::LOGIC_LOW);
+            DriveInput(B1, (B & 0b010) ?  cLogic::LOGIC_HIGH :  cLogic::LOGIC_LOW);
+            DriveInput(B0, (B & 0b001) ?  cLogic::LOGIC_HIGH :  cLogic::LOGIC_LOW);
 
             // Read outputs (ComputeOutput() is already triggered by DriveInput/reads)
             int s0   = GetOutputState(S0);
@@ -181,16 +187,16 @@ void cThreeBitAdder::TestOutputs() {
 // Runs the simulation by creating a HalfAdder, testing its outputs, and cleaning up
 void cSimulation::RunSimulation() {
 
-    cHalfAdder* HalfAdder = new cHalfAdder; // Create a new HalfAdder
-    HalfAdder->TestOutputs(); // Run all test cases for HalfAdder
-    delete HalfAdder; // Clean up
+    mptr[0] = new cNandGate;
+    mptr[1] = new cAndGate;
+    mptr[2] = new cOrGate;
+    mptr[3] = new cXorGate;
+    mptr[4] = new cHalfAdder;
+    mptr[5] = new cFullAdder;
+    mptr[6]= new cThreeBitAdder;
 
-    cFullAdder* FullAdder = new cFullAdder; // Create a new FullAdder
-    FullAdder->TestOutputs(); // Run all test cases for FullAdder
-    delete FullAdder; // Clean up
-
-    cThreeBitAdder* ThreeBitAdder = new cThreeBitAdder; // Create a new FullAdder
-    ThreeBitAdder->TestOutputs(); // Run all test cases for FullAdder
-    delete ThreeBitAdder; // Clean up
-
+    for (auto p : mptr) {
+        p->TestOutputs();
+        delete p;
+    }
 }
